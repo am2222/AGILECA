@@ -32,8 +32,7 @@ To run the CA model several software packages were used; R (R Core Team 2019); D
 
 number|Dataset|	Resolution (spatial/temporal)	|Retrieved parameters|	Source/ Licence|
 ------|--------|-----------------------------|----------------------|-----------------|
-1|	Nasa Active fire data (VNIIRS)	|approximate spatial resolution of 350m/ daily 	Active fire  data used for starting fire points|
-https://earthdata.nasa.gov/earth-observation-data/near-real-time/firms/active-fire-data
+1|	Nasa Active fire data (VNIIRS)	|approximate spatial resolution of 350m/ daily 	|Active fire  data used for starting fire points| https://earthdata.nasa.gov/earth-observation-data/near-real-time/firms/active-fire-data
 NRT VIIRS 375 m Active Fire product VNP14IMGT. Available on-line [https://earthdata.nasa.gov/firms]. doi: 10.5067/FIRMS/VIIRS/VNP14IMGT.NRT.001.
 Free to the user community.|
 2|	Copernicus Climate data|	spatial resolution of these data is 0.1 degree / 1 hour|	climate data including  wind speed and wind direction data|	https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-land?tab=overview
