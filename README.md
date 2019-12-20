@@ -1,7 +1,8 @@
 
 #Integrating cellular automata and discrete global grid systems: a case study into wildfire modelling
 ---
-**author:** "[`The Spatial lab`] (https://www.thespatiallab.org) "
+
+**author:** [_The Spatial lab_] (https://www.thespatiallab.org)
 **date:** 11/20/2019
 
 
