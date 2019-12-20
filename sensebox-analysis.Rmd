@@ -1,0 +1,566 @@
+---
+title: "Integrating cellular automata and discrete global grid systems: a case study into wildfire modelling"
+author: "[`The Spatial lab`] (https://www.thespatiallab.org) "
+date: "`r format(Sys.time(), '%Y-%m-%d %T %Z')`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Abstract
+
+Abstract
+With new forms of digital spatial data driving new applications for monitoring and understanding environmental change, there are growing demands on traditional GIS tools for spatial data storage, management and processing. Discrete Global Grid System (DGGS) are methods to tessellate globe into multiresolution grids, which represent a global spatial fabric capable of storing heterogeneous spatial data, and improved performance in data access, retrieval, and analysis. While DGGS-based GIS may hold potential for next-generation big data GIS platforms, few of studies have tried to implement them as a framework for operational spatial analysis. Cellular Automata (CA) is a classic dynamic modeling framework which has been used with traditional raster data model for various environmental modeling such as wildfire modeling, urban expansion modeling and so on. The main objectives of this paper were to (i) investigate the possibility of using DGGS for running dynamic spatial analysis, (ii) evaluate CA as a generic data model for dynamic phenomena modeling within a DGGS data model and (iii) evaluate an in-database approach for CA modelling. To do so, a case study into wildfire spread modelling is developed. Results demonstrate that using a DGGS data model not only provides the ability to integrated different data sources, but also provides a framework to do spatial analysis without using geometry-based analysis. This results in a simplified architecture and common spatial fabric to support development of a wide array of spatial algorithms. While considerable work remains to be done, CA modelling within a DGGS-based GIS is a robust and flexible modelling framework for big-data GIS analysis in an environmental monitoring context.
+
+**Key Words**: DGGS, Discrete Global Grid System, Cellular Automaton, Wildfire 
+**DOI**: [`10.5281/zenodo.1135140`](https://doi.org/10.5281/zenodo.1135140).
+
+## Data and Software Availability
+
+To run the CA model several software packages were used; R (R Core Team 2019); Dplyr (Wickham et al. 2019) and dggridR (Barnes 2018). Table 1 also shows the different datasets, which were used for wildfire spread modelling. These data were converted into the DGGS data model and stored in the database table structure. A Netezza IBM database engine was used as big geo data storage platform, however any relational database system could be used. Currently, due to security-related issues it is not possible to share any connection to this database application. For this reason, a small portion of the data, which is used to run the model, is stored as CSV data format with a working script, which are accessible in the following GitHub repository: https://github.com/am2222/AGILECA
+
+	Dataset	Resolution (spatial/temporal)	Retrieved parameters	Source/ Licence
+1	Nasa Active fire data (VNIIRS)	approximate spatial resolution of 350m/ daily 	Active fire data used for starting fire points	https://earthdata.nasa.gov/earth-observation-data/near-real-time/firms/active-fire-data
+NRT VIIRS 375 m Active Fire product VNP14IMGT. Available on-line [https://earthdata.nasa.gov/firms]. doi: 10.5067/FIRMS/VIIRS/VNP14IMGT.NRT.001.
+Free to the user community.
+2	Copernicus Climate data	spatial resolution of these data is 0.1 degree / 1 hour	climate data including  wind speed and wind direction data	https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-land?tab=overview
+DOI: 10.24381/cds.e2161bac
+3	Canada Dem	0.0002 degree spatial resolution	Elevation	https://open.canada.ca/data/en/dataset/7
+f245e4d-76c2-4caa-951a-45d1d2051333
+Open Government Licence - Canada
+4	National land cover dataset	0.0002 degree spatial resolution	Land Cover	https://www.nrcan.gc.ca
+8	Landsat 8 Data
+(2016/05/03-2016/05/05-2016/05/12)	30 meters / 16 days	True color band composition to extract fire boundary	https://www.usgs.gov/landsat
+Landsat-7 image courtesy of the U.S. Geological Survey
+
+
+### Load required libraries
+
+```{r packages, warning=FALSE, message=FALSE}
+library("tidyverse")
+library("ggplot2")
+library("rgeos")
+library("sf")
+library("ggsflabel")
+library("dplyr")
+require("gridExtra")
+library("dggridR")
+library("ggforce")
+library("here")
+
+#============loading data for the test cases
+source(here("model_test_cases.R"))
+#============Setting work directory
+setwd(here())
+```
+
+<span style="color: grey;">[output hidden]</span>
+
+### Test Cases
+In order to analyse the sensitivity of the model a set of predefined test cases are designed, and the model is applied on these test cases with different values for each coefficient for each parameter.  In each test case only one of the parameters is changed and the rest of parameters are considered to be constant. 
+**Test: Wind with wind coefficient = 0.3/50 iterations**
+
+```{r}
+
+
+wind_50_0.5 <- testWind(50,wind,0.3)
+wind_50_0.5 <- mutate(wind_50_0.5,step=step/10)
+plot_wind_50_0.5 <- plotResult(wind_50_0.5)
+plot_wind_50_0.5
+
+
+
+```
+
+
+
+
+**Test: Wind with wind coefficient = 0.4/50 iterations**
+
+```{r}
+
+wind_50_1 <- testWind(50,wind,0.4)
+wind_50_1 <- mutate(wind_50_1,step=step/10)
+plot_wind_50_1 <- plotResult(wind_50_1)
+plot_wind_50_1
+
+
+```
+
+**Test: Wind with wind coefficient = 0.0/50 iterations**
+```{r}
+
+
+wind_50_0 <- testWind(50,wind,0)
+wind_50_0 <- mutate(wind_50_0,step=step/10)
+plot_wind_50_0 <- plotResult(wind_50_0)
+plot_wind_50_0
+
+
+
+```
+
+**Test: Landuse with Landuse coefficient = 0.5/50 iterations**
+
+```{r}
+
+wind <-filter(nbs_ltable,hour==1)%>%
+  dplyr::select("cid","nb","direction","wind")%>%
+  mutate(wind= 0)
+luse_50_0.5 <- testLandUse(50,wind,0.5)
+plot_luse_50_0.5 <- plotResult(luse_50_0.5)
+plot_luse_50_0.5
+
+
+```
+
+**Test: Landuse with Landuse coefficient = 0.5/70 iterations**
+
+```{r}
+
+luse_100_0.5 <- testLandUse(70,wind,0.5)
+plot_luse_100_0.5 <- plotResult(luse_100_0.5)
+plot_luse_100_0.5
+
+```
+
+
+### Load data For the main model
+
+```{r load_data}
+
+#==============================dggs definistion
+pole_lat <-37
+pole_lon <- -178
+dggs = dgconstruct(projection = "ISEA", aperture = 3,
+                   res = 22, precision = 7, area = NA, spacing = NA, cls = NA,
+                   resround = "nearest", metric = TRUE, show_info = TRUE,
+                   azimuth_deg = 0, pole_lat_deg = pole_lat, pole_lon_deg =pole_lon)
+#============================== data loading
+
+fire <- readOGR(here("data\\DL_FIRE_M6_62518\\fire_archive_M6_62518.shp"))
+
+nbs_ltable <- read.csv(here('data/nghbs.txt'),sep="|", header=FALSE, col.names=c("cid","wind","nb","direction","hour"))
+column_names <- c("wkt","dggid","i","j","bearing","alpha","dem","luse")
+df <- read.csv(here('data/lookup.txt'),sep="|", header=FALSE, col.names=column_names)
+df <- select(df,"dggid","wkt","i","j","dem","luse")
+
+
+
+
+```
+
+### Exploring openSenseMap
+
+The openSenseMap currently provides access to `r nrow(all_boxes)` senseBoxes of which `r nrow(pm25_boxes)` provide measurements of [PM2.5](https://www.umweltbundesamt.de/sites/default/files/medien/377/dokumente/infoblatt_feinstaub_pm2_5_en.pdf) around `r format(analysis_date, "%Y-%m-%d %T %Z")`.
+
+The following map shows the PM2.5 sensor locations, which are mostly deployed in central Europe.
+
+```{r init_fire_points}
+#============================== 
+df$state <-0
+# set some sells in fire 
+fireSeq <- dgGEO_to_SEQNUM(dggs,fire@coords[,1] ,fire@coords[,2])
+fireQ2di <- dgGEO_to_Q2DI(dggs,fire@coords[,1] ,fire@coords[,2])
+
+df <- within(df, state[dggid %in% fireSeq$seqnum] <- 1)
+```
+
+
+
+```{r apply_lanuse_weights}
+
+#TODO: Apply other landuse weights. 
+# you can apply vegetation density and vegetation type or ..
+# 1 needleleaf forest 
+# 2 tiga needleleaf
+# 3 braodleaf evergreen forest R~ 0.0058
+# 4, 5 deciduous evergreen 
+# 6 Mixed Forest
+# 8 shurbland R ~ 0.0082
+# 10 Grassland R ~ 0.0031
+# 14, 17, 18 wetland, urban, water ==0
+df <- mutate(df,"luse" = case_when( luse==17  ~ as.numeric(0),
+                                   TRUE  ~ as.numeric(1)))%>% 
+  select("dggid","wkt",state,luse,dem)%>% 
+  mutate(r0=luse)
+
+```
+
+
+
+```{r setting model paramertes}
+#============================== Data are ready - model parameters
+
+tr <- 0.4 # threshold for converting a burning cell into burned cell 
+windCoef <- 0.8 #less value decreases the wind effect. for example 0.17 makes all the wind directions be in a same
+# range. 1 exagerates the wind effect. 
+elevCoef <- 1
+df$sumr <- 0
+m <- 1
+#=============================== runing model
+
+wind <-filter(nbs_ltable,hour==1)%>%
+  select("cid","nb","direction","wind")%>%
+  mutate(wind=exp(windCoef*wind))
+
+
+filter(wind,cid==fireSeq$seqnum[1])
+#==============================
+burningCells <- filter(df,state>0|sumr>0)%>%
+  select("dggid")
+potentialCells <- inner_join(burningCells,wind,by=c("dggid"="cid"))%>%
+  select("dggid"=nb)%>%
+  dplyr::union(burningCells)
+  
+  
+df2 <- filter(df,dggid %in% potentialCells$dggid)
+
+
+j <- inner_join(df2,wind,by=c("dggid"="nb"))%>%
+  inner_join(df2,c("cid"="dggid"))%>%
+  mutate(elev=elevCoef*exp(atan(dem.x-dem.y)))%>%
+  mutate(stw=case_when(
+    state.y %in% c(1,2,3,4) ~ elev*1*r0.y,
+    TRUE ~ 0
+  ))%>%
+  group_by(dggid)%>%
+  mutate(sumr1.x=case_when(
+    state.x==0 ~ sum(stw),
+    TRUE ~ 0
+  ),nburn=sum(state.y))%>% # sum must remove the burned cells first
+  ungroup()%>%
+  mutate(sumr.x=sumr.x+(m*sumr1.x/max(stw)))%>%
+  group_by(dggid)%>%
+  select(dggid,"wkt"=wkt.x,"dem"=dem.x,"state"=state.x,"sumr"=sumr.x,nburn,"r0"=r0.x,"luse"=luse.x)%>%
+  distinct()%>%
+  mutate(state = case_when(state==0 & nburn==0 ~ as.numeric(0),
+                           state==0  & nburn>0 & sumr <tr ~ as.numeric(0),
+                           state==0  & nburn>0 & sumr >tr ~ as.numeric(1),
+                           state==1 ~ as.numeric(2),
+                           state==2  ~ as.numeric(3),
+                           state==3  ~ as.numeric(4),
+                           state==4  ~ as.numeric(4)))
+
+#======
+burningCells <-ungroup(j)%>% filter(state>0|sumr>0)%>%
+  select("dggid")
+potentialCells <- inner_join(burningCells,wind,by=c("dggid"="cid"))%>%
+  select(nb)%>%
+  mutate(dggid=nb)%>%
+  select(dggid)%>%
+  dplyr::union(burningCells)
+
+
+newnghbs <- filter(potentialCells, !dggid %in% j$dggid)
+
+df2 <- filter(df,dggid %in% newnghbs$dggid)%>%
+  mutate(nburn=0)%>%
+  dplyr::union(j)
+
+optimisation <- function(j){
+  
+
+x <- data.frame("direction"=double() , "mea"=double(), "confidence"=double() )
+for (j in 1:6){
+  wind2 <- mutate(wind,wind_wight=case_when(
+    direction ==j~2,
+    T~0.3
+  ))
+  j_t <- inner_join(df2,wind2,by=c("dggid"="nb"))%>%
+    inner_join(df2,c("cid"="dggid"))%>%
+    mutate(elev=elevCoef*exp(atan(dem.x-dem.y)))%>%
+    mutate(stw=case_when(
+      state.y %in% c(1,2,3,4) ~ elev*wind_wight*r0.y,
+      TRUE ~ 0
+    ))%>%
+    group_by(dggid)%>%
+    mutate(sumr1.x=case_when(
+      state.x==0 ~ sum(stw),
+      TRUE ~ 0
+    ),nburn=sum(state.y))%>% # sum must remove the burned cells first
+    ungroup()%>%
+    mutate(sumr.x=sumr.x+(m*sumr1.x/max(stw)))%>%
+    group_by(dggid)%>%
+    select(dggid,"wkt"=wkt.x,"dem"=dem.x,"state"=state.x,"sumr"=sumr.x,nburn,"r0"=r0.x,"luse"=luse.x)%>%
+    distinct()%>%
+    mutate(state = case_when(state==0 & nburn==0 ~ as.numeric(0),
+                             state==0  & nburn>0 & sumr <tr ~ as.numeric(0),
+                             state==0  & nburn>0 & sumr >tr ~ as.numeric(1),
+                             state==1 ~ as.numeric(2),
+                             state==2  ~ as.numeric(3),
+                             state==3  ~ as.numeric(4),
+                             state==4  ~ as.numeric(4)))
+  burningCells <-ungroup(j_t)%>% filter(state==0|state==1|state==2|state==3|sumr>0)
+  
+  sdf = st_as_sf(burningCells, wkt='wkt', crs = 4326)
+  ex <- raster::extract(r$var1.pred, sdf, fun='mean', na.rm=TRUE, df=TRUE, weights = TRUE)
+  dat1 <- data.frame(ex, burningCells)
+  mea <- mutate(dat1,diff=abs((var1.pred/100)-sumr))%>%
+    summarise(mean = mean(is.na(diff)), n = n())
+  data <- mutate(dat1,diff=abs((var1.pred/100)-sumr))%>%
+    filter(diff<0.1)
+  
+  #we have a set of cells with different states. and an r value from 0 to 1
+  #rbind(x,list(w,mea,nrow(data)))
+  x[nrow(x) + 1,] = c(j,mea$mean,nrow(data))
+  print(paste(i,j,mea$mean,nrow(data)))
+  
+}
+
+
+max_ <- filter(x,confidence==max(x$confidence)) 
+
+ww <- mutate(wind,ww=case_when(
+  direction %in% max_$direction ~ 1,
+  T ~ 0.2
+))
+return(ww)
+}
+for (i in 1:50) {
+  wind_opt <- optimisation(j)
+  print(i)
+  j <- inner_join(df2,wind_opt,by=c("dggid"="nb"))%>%
+    inner_join(df2,c("cid"="dggid"))%>%
+    mutate(elev=elevCoef*exp(atan(dem.x-dem.y)))%>%
+    mutate(stw=case_when(
+      state.y %in% c(1,2,3,4) ~ elev*ww*r0.y,
+      TRUE ~ 0
+    ))%>%
+    group_by(dggid)%>%
+    mutate(sumr1.x=case_when(
+      state.x==0 ~ sum(stw),
+      TRUE ~ 0
+    ),nburn=sum(state.y))%>% # sum must remove the burned cells first
+    ungroup()%>%
+    mutate(sumr.x=sumr.x+(m*sumr1.x/max(stw)))%>%
+    group_by(dggid)%>%
+    select(dggid,"wkt"=wkt.x,"dem"=dem.x,"state"=state.x,"sumr"=sumr.x,nburn,"r0"=r0.x,"luse"=luse.x)%>%
+    distinct()%>%
+    mutate(state = case_when(state==0 & nburn==0 ~ as.numeric(0),
+                             state==0  & nburn>0 & sumr <tr ~ as.numeric(0),
+                             state==0  & nburn>0 & sumr >tr ~ as.numeric(1),
+                             state==1 ~ as.numeric(2),
+                             state==2  ~ as.numeric(3),
+                             state==3  ~ as.numeric(4),
+                             state==4  ~ as.numeric(4)))
+  
+
+  
+  
+  
+  write.table(j, file = "test.txt", row.names = FALSE, dec = ".", sep = "|", quote = FALSE)
+  
+  
+  #======
+  burningCells <-ungroup(j)%>% filter(state>0|sumr>0)%>%
+    select("dggid")
+  potentialCells <- inner_join(burningCells,wind,by=c("dggid"="cid"))%>%
+    select(nb)%>%
+    mutate(dggid=nb)%>%
+    select(dggid)%>%
+    dplyr::union(burningCells)
+  
+  
+  newnghbs <- filter(potentialCells, !dggid %in% j$dggid)
+  
+  df2 <- filter(df,dggid %in% newnghbs$dggid)%>%
+    mutate(nburn=0)%>%
+    dplyr::union(j)
+  
+  
+  
+}
+
+
+
+```
+
+
+
+
+```{r plot_outdoor_feinstaub}
+plot(pm25_boxes)
+```
+
+
+### Particulates at New Year's Eve in Münster
+
+_How many senseBoxes in Münster measure PM2.5?_
+
+```{r muenster_boxes}
+ms <- st_sfc(st_point(c(7.62571, 51.96236)))
+st_crs(ms) <- 4326
+
+pm25_boxes_sf <- st_as_sf(pm25_boxes, remove = FALSE, agr = "identity")
+names(pm25_boxes_sf) <- c(names(pm25_boxes), "geometry")
+
+pm25_boxes_sf <- cbind(pm25_boxes_sf, dist_to_ms = st_distance(ms, pm25_boxes_sf))
+max_dist <- set_units(7, km) # km from city center
+
+ms_boxes <- pm25_boxes_sf[pm25_boxes_sf$dist_to_ms < max_dist,c("X_id", "name")]
+ms_boxes
+```
+
+_Where are the sensors in Münster?_ <span style="color: grey;">[Does not work in Jupyter Notebook]</span>
+
+```{r muenster_plot_map}
+sense_icon <- awesomeIcons(
+  icon = 'cube',
+  iconColor = '#ffffff',
+  library = 'fa',
+  markerColor = 'green'
+)
+
+leaflet() %>% 
+  addTiles() %>%
+  addAwesomeMarkers(data = ms_boxes,
+             popup = ~paste0("<b>Name:</b> ", name, "<br><b>Id:</b> ", 
+                             "<a href='https://opensensemap.org/explore/", X_id, "' ",
+                             "target='_blank'>", X_id, "</a>"),
+             label = ~name,
+             icon = sense_icon)
+```
+
+Now we retrieve data for `r nrow(ms_boxes)` senseBoxes with values in the area of interest.
+
+```{r muenster_data}
+if(online) {
+  class(ms_boxes) <- c("sensebox", class(ms_boxes))
+  ms_data <- osem_measurements(ms_boxes, phenomenon = "PM2.5",
+                             from = lubridate::as_datetime("2017-12-31 20:00:00"),
+                             to = lubridate::as_datetime("2018-01-01 04:00:00"),
+                             columns = c("value", "createdAt", "lat", "lon", "boxId",
+                                         "boxName", "exposure", "sensorId",
+                                         "phenomenon", "unit", "sensorType"))
+  # update local data
+  data_json <- toJSON(ms_data, digits = NA, pretty = TRUE)
+  write(data_json, file = here("data/ms_data.json"))
+} else {
+  # load data from file and fix column types
+  ms_data_file <- fromJSON(here("data/ms_data.json"))
+  ms_data <- type_convert(ms_data_file,
+                                  col_types = cols(
+                                    sensorId = col_factor(levels = NULL),
+                                    unit = col_factor(levels = NULL)))
+  class(ms_data) <- c("sensebox", class(ms_data))
+}
+
+summary(ms_data %>% 
+                select(value,sensorId,unit))
+```
+
+We can now plot `r nrow(ms_data)` measurements.
+
+```{r muenster_plot_timeseries}
+plot(value~createdAt, ms_data, 
+     type = "p", pch = '*', cex = 2, # new year's style
+     col = factor(ms_data$sensorId), 
+     xlab = NA, 
+     ylab = unique(ms_data$unit),
+     main = "Particulates measurements (PM2.5) on New Year 2017/2018",
+     sub = paste(nrow(ms_boxes), "stations in Münster, Germany\n",
+                 "Data by openSenseMap.org licensed under",
+                 "Public Domain Dedication and License 1.0"))
+```
+
+You can see, it was a [very "particular" celebration](http://www.dw.com/en/new-years-eve-are-fireworks-harming-the-environment/a-41957523).
+
+_Who are the record holders?_
+
+```{r top_three_boxes}
+top_measurements <- ms_data %>%
+  arrange(desc(value))
+top_boxes <- top_measurements %>%
+               distinct(sensorId, .keep_all = TRUE)
+knitr::kable(x = top_boxes %>%
+               select(value, createdAt, boxName) %>%
+               head(n = 3),
+             caption = "Top 3 boxes")
+```
+
+**Note:** The timestamp is UTC and the local time is [CET](https://en.wikipedia.org/wiki/CET) (`UTC+1:00`).
+The value `999.9` is the maximum value measured by the used sensor [SDS011](https://nettigo.pl/attachments/398).
+
+```{r top_boxes}
+knitr::kable(top_boxes %>% filter(value == max(top_boxes$value)) %>%
+               select(sensorId, boxName),
+             col.names = c("Top sensor identifier", "Top box name"))
+```
+
+Congratulations (?) to boxes for holding the record values just after the new year started.
+
+_Where are the record holding boxes?_
+
+**Static plot**
+
+```{r top_box_plot}
+top_boxes_sf <- top_boxes %>% 
+  filter(value == max(top_boxes$value)) %>%
+  st_as_sf(coords = c('lon', 'lat'), crs = 4326)
+bbox <- sf::st_bbox(top_boxes_sf)
+
+world <- map("world", plot = FALSE, fill = TRUE) %>%
+  sf::st_as_sf() %>%
+  sf::st_geometry()
+
+plot(world,
+     xlim = round(bbox[c(1,3)], digits = 1),
+     ylim = round(bbox[c(2,4)], digits = 1),
+     axes = TRUE, las = 1)
+plot(top_boxes_sf, add = TRUE, col = "red", cex = 2)
+title("senseBox stations in Münster with highest PM2.5 measurements")
+```
+
+**Interactive map** 
+
+```{r top_box_map}
+fireworks_icon <- makeIcon(
+  # icon source: https://commons.wikimedia.org/wiki/File:Fireworks_2.png
+  iconUrl = "320px-Fireworks_2.png", iconWidth = 160)
+
+leaflet(data = top_boxes_sf) %>% 
+  addTiles() %>%
+  addMarkers(popup = ~as.character(boxName),
+             label = ~as.character(boxName),
+             icon = fireworks_icon)
+```
+
+## Jupyter Notebook conversion
+
+A converted version of this file can in Jupyter Notebook format is automatically created with each rendering using [`ipyrmd`](https://pypi.python.org/pypi/ipyrmd/0.4.3).
+`ipyrmd` is installed with other dependencies in the file `install.R`.
+The Jupyter Notebook is intended to increase accessability for users unfamiliar with R Markdown.
+The automatic conversion does not handle code statements within sentences.
+
+```{bash convert_to_ipynb}
+ipyrmd --to ipynb --from Rmd -y -o sensebox-analysis.ipynb sensebox-analysis.Rmd
+```
+
+## Conclusion
+
+This document creates a reproducible workflow of open data from a public API.
+It leverages software to create a transparent analysis, which can be easily opened, investigated, and even developed further with a web browser by opening the public code repository on a free cloud platform.
+To increase reproducibility, the data is cached manually as CSV files (i.e. text-based data format) and stored next to the analysis file.
+A use may adjust this workflow to her own needs, like different location or time period, by adjust the R code and deleting the data files.
+In case the exploration platform ceases to exist, users may still recreate the environment themselves based on the files in the code repository.
+A snapshot of the files from the code repository, i.e. data, code, and runtime environment (as a Docker image) are stored in a reliable data repository.
+While the manual workflow of building the image and running it is very likely to work in the future, the archived image captures the exact version of the software the original author used.
+
+The presented solution might seem complex.
+But it caters to many different levels of expertise (one-click open in browser vs. self-building of images and local inspection) and has several fail-safes (binder may disappear, GitHub repository may be lost, Docker may stop working).
+The additional work is much outweighed by the advantages in transparency and openness.
+
+## License
+
+<img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by/4.0/88x31.png" />
+
+This document is licensed under a [Creative Commons Attribution 4.0 International ](https://creativecommons.org/licenses/by/4.0/) (CC BY 4.0).
+
+## Metadata
+
+```{r metadata}
+devtools::session_info()
+```
