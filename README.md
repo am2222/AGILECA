@@ -26,6 +26,7 @@ This repo can be opened directly in [Binder](https://mybinder.org/)
 
 [![screencast of senseBox-Binder analysis in RStudio running on mybinder.org](https://media.giphy.com/media/l49JRjO65S0WQ1Kyk/giphy.gif)](https://mybinder.org/v2/gh/am2222/AGILECA/bfe6c0e184111dfe5460f34d0b9b2520e3ad9516)
 
+
 ## Data and Software Availability
 
 To run the CA model several software packages were used; R (R Core Team 2019); Dplyr (Wickham et al. 2019) and dggridR (Barnes 2018). Table 1 also shows the different datasets, which were used for wildfire spread modelling. These data were converted into the DGGS data model and stored in the database table structure. A Netezza IBM database engine was used as big geo data storage platform, however any relational database system could be used. Currently, due to security-related issues it is not possible to share any connection to this database application. For this reason, a small portion of the data, which is used to run the model, is stored as CSV data format with a working script, which are accessible in the following GitHub repository: https://github.com/am2222/AGILECA
