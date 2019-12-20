@@ -1,4 +1,6 @@
 devtools::install_github("noerw/opensensmapr")
 install.packages("here")
+install.packages("dggridR")
+install.packages("gridExtra")
 system("pip3 install --upgrade wheel")
 system("pip3 install ipyrmd")

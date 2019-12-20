@@ -43,11 +43,9 @@ library("tidyverse")
 library("ggplot2")
 library("rgeos")
 library("sf")
-library("ggsflabel")
 library("dplyr")
 require("gridExtra")
 library("dggridR")
-library("ggforce")
 library("here")
 
 #============loading data for the test cases
