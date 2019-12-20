@@ -2,11 +2,11 @@
 #============================== data loading
 
 
-nbs_ltable <- read.csv(here('data\\nghb_test.txt'),sep=";", header=T, col.names=c("cid","direction","wind","hour","nb"))
+nbs_ltable <- read.csv(here('data/nghb_test.txt'),sep=";", header=T, col.names=c("cid","direction","wind","hour","nb"))
 
 
 column_names <- c("wkt","dggid","i","j","bearing","alpha","dem","luse")
-lookup <- read.csv(here('data\\lookupRes20.txt'),sep="|", header=FALSE, col.names=column_names)
+lookup <- read.csv(here('data/lookupRes20.txt'),sep="|", header=FALSE, col.names=column_names)
 
 
 #==============================model parameters
