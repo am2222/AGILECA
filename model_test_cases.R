@@ -132,9 +132,15 @@ testWind <- function(maxiteration,wind,windCoef){
     if (i%%optimizationInteraval==0){
       # let's run optimization once
      # print("storing Data")
+#       boundry <- filter(j)%>%
+#         left_join(lookup,by=c("dggid","dggid"))%>%
+#         dplyr::select(dggid,i,j,"wkt"=wkt.y,state)
+      
       boundry <- filter(j)%>%
-        left_join(lookup,by=c("dggid","dggid"))%>%
+        left_join(lookup,by = c("dggid"))%>%
         dplyr::select(dggid,i,j,"wkt"=wkt.y,state)
+      
+      
       finalresults <- mutate(j,step=i)%>%
         dplyr::union(finalresults,j)
       
