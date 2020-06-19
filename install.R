@@ -1,5 +1,5 @@
 print("installing libraries")
-
+print(R.Version())
 install.packages("isoband")
 install.packages("tidyverse")
 devtools::install_github("tidyverse/ggplot2")
