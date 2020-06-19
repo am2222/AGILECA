@@ -1,3 +1,4 @@
+print("installing libraries")
 install.packages("tidyverse")
 install.packages("here")
 install.packages("gridExtra")
