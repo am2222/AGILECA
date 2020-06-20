@@ -141,7 +141,7 @@ dggs = dgconstruct(projection = "ISEA", aperture = 3,
 fire <- readOGR(here("data","DL_FIRE_M6_62518","fire_archive_M6_62518.shp"))
 
 #neighbourhood data with wind speed and direction
-nbs_ltable <- read.csv(here('data','nghbs_2.txt'),sep = ";", header=T, col.names=c("id","cid","wind","nb","direction","hour"))
+nbs_ltable <- read.csv(here('data','nghbs_1.txt'),sep = ";", header=T, col.names=c("id","cid","wind","nb","direction","hour"))
 column_names <- c("wkt","dggid","i","j","bearing","alpha","dem","luse")
 
 # other parameters including dem and landuse
@@ -202,7 +202,6 @@ nbs_ltable$wind <- as.numeric(nbs_ltable$wind)
 wind <-filter(nbs_ltable,hour==1)%>%
   select("cid","nb","direction","wind","wcoef")%>%
   mutate(wind=exp(windCoef*wind))
-
 
 filter(wind,cid==fireSeq$seqnum[1])
 #============================== Run model for the first itteration 

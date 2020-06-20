@@ -27,6 +27,15 @@ This repo can be opened directly in [Binder](https://mybinder.org/)
 Click on [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/am2222/AGILECA.git/master) and wait untill binder loads the docker. Then from menu on top right click on `new` and select `r studio`. 
 in the next step from files panel on right side of `R studio` click and run run-model.Rproj and then run run-model.Rmd.
 
+## What does it do
+Due to the limitation on uploading data and framework only a portion of data is uploaded on this project. As a result you will not get the similar outputs as described on the paper. The following parts are included in this repository.
+
+- Sensitivity Analysis for diffrent parameters 
+![Sample Output](data/000006.png?raw=true "Sample Output of Sensitivity Analysis")
+- Model output for the first 25 itteration.
+![Sample Output](data/SharedScreenshot.jpg?raw=true "Sample Output of first 25 itteration")
+
+
 
 
 ## Data and Software Availability
