@@ -24,7 +24,9 @@ With new forms of digital spatial data driving new applications for monitoring a
 
 This repo can be opened directly in [Binder](https://mybinder.org/)
 
-[![screencast of senseBox-Binder analysis in RStudio running on mybinder.org](https://media.giphy.com/media/l49JRjO65S0WQ1Kyk/giphy.gif)](https://mybinder.org/v2/gh/am2222/AGILECA/bfe6c0e184111dfe5460f34d0b9b2520e3ad9516)
+Click on [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/am2222/AGILECA.git/master) and wait untill binder loads the docker. Then from menu on top right click on `new` and select `r studio`. 
+in the next step from files panel on right side of `R studio` click and run run-model.Rproj and then run run-model.Rmd.
+
 
 
 ## Data and Software Availability
@@ -42,3 +44,6 @@ number|Dataset|	Resolution (spatial/temporal)	|Retrieved parameters|	Source/ Lic
 ## References
 
 This project is licensed under Apache License, Version 2.0, see file LICENSE.
+
+## Base Repository
+This repositoy is forked from original repository at https://github.com/nuest/sensebox-binder/. 

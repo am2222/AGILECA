@@ -19,7 +19,7 @@ elevCoef <- 1
 m <- 1
 optimizationInteraval <- 10
 newFireThershold <-3000
-#==============================
+#============================== read wind data
 
 wind <-filter(nbs_ltable,hour==1)%>%
   dplyr::select("cid","nb","direction","wind")%>%
@@ -27,7 +27,7 @@ wind <-filter(nbs_ltable,hour==1)%>%
     direction==1 ~ as.numeric(1/5),
     direction==4 ~ as.numeric(5),
     TRUE  ~ as.numeric(0)))
-#============================== 
+#==============================  test wind sensitivity
 
 testWind <- function(maxiteration,wind,windCoef){
   wind <- mutate(wind, wind=exp(windCoef*wind),optweight=1)
@@ -203,7 +203,7 @@ testWind <- function(maxiteration,wind,windCoef){
   return(finalresults)
 }
 
-#============================== 
+#==============================  plot sensitivity data
 plotResult <- function(data){
   sf_df = st_as_sf(data, wkt='wkt', crs = 4326)
   # sf_df <- st_transform(sf_df,st_crs(3857))
@@ -224,14 +224,23 @@ plotResult <- function(data){
           panel.background = element_blank(),
           legend.position="none")
   # +coord_sf(datum=st_crs(3857))
-  p
+  #p
   return(p)
 }
-#============================== 
+#==============================  Plot the final result
 
+finalPlot <- function(data){
+  sf_df = st_as_sf(data, wkt='wkt', crs = 4326)
+  # sf_df <- st_transform(sf_df,st_crs(3857))
+  # nc3_points <- sf::st_point_on_surface(sf_df)
+  # nc3_coords <- as.data.frame(sf::st_coordinates(nc3_points))
+  
+  p <- ggplot() + 
+    geom_sf(data=sf_df, aes(fill =  state), lwd=0, color=NA)
+  return(p) 
+}
 
-
-#==================landuse
+#==================landuse sensitiviy function
 
 
 

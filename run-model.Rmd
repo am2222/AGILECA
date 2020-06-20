@@ -1,0 +1,331 @@
+---
+title: "Integrating cellular automata and discrete global grid systems: a case study into wildfire modelling"
+author: "[`The Spatial lab`] (https://www.thespatiallab.org) "
+date: "`r format(Sys.time(), '%Y-%m-%d %T %Z')`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Abstract
+
+Abstract
+With new forms of digital spatial data driving new applications for monitoring and understanding environmental change, there are growing demands on traditional GIS tools for spatial data storage, management and processing. Discrete Global Grid System (DGGS) are methods to tessellate globe into multiresolution grids, which represent a global spatial fabric capable of storing heterogeneous spatial data, and improved performance in data access, retrieval, and analysis. While DGGS-based GIS may hold potential for next-generation big data GIS platforms, few of studies have tried to implement them as a framework for operational spatial analysis. Cellular Automata (CA) is a classic dynamic modeling framework which has been used with traditional raster data model for various environmental modeling such as wildfire modeling, urban expansion modeling and so on. The main objectives of this paper were to (i) investigate the possibility of using DGGS for running dynamic spatial analysis, (ii) evaluate CA as a generic data model for dynamic phenomena modeling within a DGGS data model and (iii) evaluate an in-database approach for CA modelling. To do so, a case study into wildfire spread modelling is developed. Results demonstrate that using a DGGS data model not only provides the ability to integrated different data sources, but also provides a framework to do spatial analysis without using geometry-based analysis. This results in a simplified architecture and common spatial fabric to support development of a wide array of spatial algorithms. While considerable work remains to be done, CA modelling within a DGGS-based GIS is a robust and flexible modelling framework for big-data GIS analysis in an environmental monitoring context.
+
+**Key Words**: DGGS, Discrete Global Grid System, Cellular Automaton, Wildfire 
+**DOI**: [`10.5281/zenodo.1135140`](https://doi.org/10.5281/zenodo.1135140).
+
+## Data and Software Availability
+
+To run the CA model several software packages were used; R (R Core Team 2019); Dplyr (Wickham et al. 2019) and dggridR (Barnes 2018). Table 1 also shows the different datasets, which were used for wildfire spread modelling. These data were converted into the DGGS data model and stored in the database table structure. A Netezza IBM database engine was used as big geo data storage platform, however any relational database system could be used. Currently, due to security-related issues it is not possible to share any connection to this database application. For this reason, a small portion of the data, which is used to run the model, is stored as CSV data format with a working script, which are accessible in the following GitHub repository: https://github.com/am2222/AGILECA
+
+	Dataset	Resolution (spatial/temporal)	Retrieved parameters	Source/ Licence
+1	Nasa Active fire data (VNIIRS)	approximate spatial resolution of 350m/ daily 	Active fire data used for starting fire points	https://earthdata.nasa.gov/earth-observation-data/near-real-time/firms/active-fire-data
+NRT VIIRS 375 m Active Fire product VNP14IMGT. Available on-line [https://earthdata.nasa.gov/firms]. doi: 10.5067/FIRMS/VIIRS/VNP14IMGT.NRT.001.
+Free to the user community.
+2	Copernicus Climate data	spatial resolution of these data is 0.1 degree / 1 hour	climate data including  wind speed and wind direction data	https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-land?tab=overview
+DOI: 10.24381/cds.e2161bac
+3	Canada Dem	0.0002 degree spatial resolution	Elevation	https://open.canada.ca/data/en/dataset/7
+f245e4d-76c2-4caa-951a-45d1d2051333
+Open Government Licence - Canada
+4	National land cover dataset	0.0002 degree spatial resolution	Land Cover	https://www.nrcan.gc.ca
+8	Landsat 8 Data
+(2016/05/03-2016/05/05-2016/05/12)	30 meters / 16 days	True color band composition to extract fire boundary	https://www.usgs.gov/landsat
+Landsat-7 image courtesy of the U.S. Geological Survey
+
+
+### Load required libraries
+
+```{r packages, warning=FALSE, message=FALSE}
+library("tidyverse")
+library("ggplot2")
+library("rgeos")
+library("sf")
+library("dplyr")
+require("gridExtra")
+library("dggridR")
+library("here")
+
+#============loading data for the test cases
+source(here("model_test_cases.R"))
+#============Setting work directory
+setwd(here())
+```
+
+<span style="color: grey;">[output hidden]</span>
+
+### Test Cases
+In order to analyse the sensitivity of the model a set of predefined test cases are designed, and the model is applied on these test cases with different values for each coefficient for each parameter.  In each test case only one of the parameters is changed and the rest of parameters are considered to be constant. 
+**Test: Wind with wind coefficient = 0.3/50 iterations**
+
+```{r}
+
+
+wind_50_0.5 <- testWind(50,wind,0.3)
+wind_50_0.5 <- mutate(wind_50_0.5,step=step/10)
+plot_wind_50_0.5 <- plotResult(wind_50_0.5)
+plot_wind_50_0.5
+
+
+
+```
+
+
+
+
+**Test: Wind with wind coefficient = 0.4/50 iterations**
+
+```{r}
+
+wind_50_1 <- testWind(50,wind,0.4)
+wind_50_1 <- mutate(wind_50_1,step=step/10)
+plot_wind_50_1 <- plotResult(wind_50_1)
+plot_wind_50_1
+
+
+```
+
+**Test: Wind with wind coefficient = 0.0/50 iterations**
+```{r}
+
+
+wind_50_0 <- testWind(50,wind,0)
+wind_50_0 <- mutate(wind_50_0,step=step/10)
+plot_wind_50_0 <- plotResult(wind_50_0)
+plot_wind_50_0
+
+
+
+```
+
+**Test: Landuse with Landuse coefficient = 0.5/50 iterations**
+
+```{r}
+
+wind <-filter(nbs_ltable,hour==1)%>%
+  dplyr::select("cid","nb","direction","wind")%>%
+  mutate(wind= 0)
+luse_50_0.5 <- testLandUse(50,wind,0.5)
+plot_luse_50_0.5 <- plotResult(luse_50_0.5)
+plot_luse_50_0.5
+
+
+```
+
+**Test: Landuse with Landuse coefficient = 0.5/70 iterations**
+
+```{r}
+
+luse_100_0.5 <- testLandUse(70,wind,0.5)
+plot_luse_100_0.5 <- plotResult(luse_100_0.5)
+plot_luse_100_0.5
+
+```
+
+
+### Load data For the main model
+
+```{r load_data}
+
+#==============================dggs definistion
+pole_lat <-37
+pole_lon <- -178
+dggs = dgconstruct(projection = "ISEA", aperture = 3,
+                   res = 22, precision = 7, area = NA, spacing = NA, cls = NA,
+                   resround = "nearest", metric = TRUE, show_info = TRUE,
+                   azimuth_deg = 0, pole_lat_deg = pole_lat, pole_lon_deg =pole_lon)
+#============================== input data loading
+# the source of the fire data
+fire <- readOGR(here("data","DL_FIRE_M6_62518","fire_archive_M6_62518.shp"))
+
+#neighbourhood data with wind speed and direction
+nbs_ltable <- read.csv(here('data','nghbs_2.txt'),sep = ";", header=T, col.names=c("id","cid","wind","nb","direction","hour"))
+column_names <- c("wkt","dggid","i","j","bearing","alpha","dem","luse")
+
+# other parameters including dem and landuse
+df <- read.csv(here('data','lookup.txt'),sep="|", header=FALSE, col.names=column_names)
+df <- select(df,"dggid","wkt","i","j","dem","luse")
+
+
+```
+
+**init_fire_points**
+In this step we convert fire point data to dggs ids.
+```{r init_fire_points}
+#============================== 
+df$state <-0
+# set some sells in fire 
+fireSeq <- dgGEO_to_SEQNUM(dggs,fire@coords[,1] ,fire@coords[,2])
+fireQ2di <- dgGEO_to_Q2DI(dggs,fire@coords[,1] ,fire@coords[,2])
+
+df <- within(df, state[dggid %in% fireSeq$seqnum] <- 1)
+```
+
+
+**apply_lanuse_weights**
+Each landuse has an specific weight which effects on the fire.
+```{r apply_lanuse_weights}
+
+# you can apply vegetation density and vegetation type or ..
+# 1 needleleaf forest 
+# 2 tiga needleleaf
+# 3 braodleaf evergreen forest R~ 0.0058
+# 4, 5 deciduous evergreen 
+# 6 Mixed Forest
+# 8 shurbland R ~ 0.0082
+# 10 Grassland R ~ 0.0031
+# 14, 17, 18 wetland, urban, water ==0
+df <- mutate(df,"luse" = case_when( luse==17  ~ as.numeric(0),
+                                   TRUE  ~ as.numeric(1)))%>% 
+  select("dggid","wkt",state,luse,dem)%>% 
+  mutate(r0=luse)
+
+```
+
+
+**Setting model paramertes and running model**
+
+```{r setting model paramertes}
+#============================== Data are ready - model parameters
+
+tr <- 0.4 # threshold for converting a burning cell into burned cell 
+windCoef <- 0.8 #less value decreases the wind effect. for example 0.17 makes all the wind directions be in a same
+# range. 1 exagerates the wind effect. 
+elevCoef <- 1
+df$sumr <- 0
+m <- 1
+#=============================== runing model
+nbs_ltable['wcoef'] <- windCoef
+nbs_ltable$wind <- as.numeric(nbs_ltable$wind)
+wind <-filter(nbs_ltable,hour==1)%>%
+  select("cid","nb","direction","wind","wcoef")%>%
+  mutate(wind=exp(windCoef*wind))
+
+
+filter(wind,cid==fireSeq$seqnum[1])
+#============================== Run model for the first itteration 
+# the cells that are burning
+burningCells <- filter(df,state>0|sumr>0)%>%
+  select("dggid")
+
+#these cells are the potential cells to burn. They are neighbours of the burningCells
+potentialCells <- inner_join(burningCells,wind,by=c("dggid"="cid"))%>%
+  select("dggid"=nb)%>%
+  dplyr::union(burningCells)
+  
+  
+df2 <- filter(df,dggid %in% potentialCells$dggid)
+
+# Run CA model based on the parameters and weights 
+j <- inner_join(df2,wind,by=c("dggid"="nb"))%>%
+  inner_join(df2,c("cid"="dggid"))%>%
+  mutate(elev=elevCoef*exp(atan(dem.x-dem.y)))%>%
+  mutate(stw=case_when(
+    state.y %in% c(1,2,3,4) ~ elev*1*r0.y,
+    TRUE ~ 0
+  ))%>%
+  group_by(dggid)%>%
+  mutate(sumr1.x=case_when(
+    state.x==0 ~ sum(stw),
+    TRUE ~ 0
+  ),nburn=sum(state.y))%>% # sum must remove the burned cells first
+  ungroup()%>%
+  mutate(sumr.x=sumr.x+(m*sumr1.x/max(stw)))%>%
+  group_by(dggid)%>%
+  select(dggid,"wkt"=wkt.x,"dem"=dem.x,"state"=state.x,"sumr"=sumr.x,nburn,"r0"=r0.x,"luse"=luse.x)%>%
+  distinct()%>%
+  mutate(state = case_when(state==0 & nburn==0 ~ as.numeric(0),
+                           state==0  & nburn>0 & sumr <tr ~ as.numeric(0),
+                           state==0  & nburn>0 & sumr >tr ~ as.numeric(1),
+                           state==1 ~ as.numeric(2),
+                           state==2  ~ as.numeric(3),
+                           state==3  ~ as.numeric(4),
+                           state==4  ~ as.numeric(4)))
+
+#======
+# we need to update the burning cells
+burningCells <-ungroup(j)%>% filter(state>0|sumr>0)%>%
+  select("dggid")
+
+# and the potential cells
+potentialCells <- inner_join(burningCells,wind,by=c("dggid"="cid"))%>%
+  select(nb)%>%
+  mutate(dggid=nb)%>%
+  select(dggid)%>%
+  dplyr::union(burningCells)
+
+
+newnghbs <- filter(potentialCells, !dggid %in% j$dggid)
+
+
+df2 <- filter(df,dggid %in% newnghbs$dggid)%>%
+  mutate(nburn=0)%>%
+  dplyr::union(j)
+
+#================ Run model for 25 itterations. Due to limitation on uploading data we have only uploaded a small portion of our data.
+for (i in 1:25) {
+  #wind_opt <- optimisation(j)
+  wind_opt <- wind
+  print(i)
+  j <- inner_join(df2,wind_opt,by=c("dggid"="nb"))%>%
+    inner_join(df2,c("cid"="dggid"))%>%
+    mutate(elev=elevCoef*exp(atan(dem.x-dem.y)))%>%
+    mutate(stw=case_when(
+      state.y %in% c(1,2,3,4) ~ elev*1*r0.y,
+      TRUE ~ 0
+    ))%>%
+    group_by(dggid)%>%
+    mutate(sumr1.x=case_when(
+      state.x==0 ~ sum(stw),
+      TRUE ~ 0
+    ),nburn=sum(state.y))%>% # sum must remove the burned cells first
+    ungroup()%>%
+    mutate(sumr.x=sumr.x+(m*sumr1.x/max(stw)))%>%
+    group_by(dggid)%>%
+    select(dggid,"wkt"=wkt.x,"dem"=dem.x,"state"=state.x,"sumr"=sumr.x,nburn,"r0"=r0.x,"luse"=luse.x)%>%
+    distinct()%>%
+    mutate(state = case_when(state==0 & nburn==0 ~ as.numeric(0),
+                             state==0  & nburn>0 & sumr <tr ~ as.numeric(0),
+                             state==0  & nburn>0 & sumr >tr ~ as.numeric(1),
+                             state==1 ~ as.numeric(2),
+                             state==2  ~ as.numeric(3),
+                             state==3  ~ as.numeric(4),
+                             state==4  ~ as.numeric(4)))
+  
+
+  
+  
+  
+  #write.table(j, file = "test.txt", row.names = FALSE, dec = ".", sep = "|", quote = FALSE)
+  #jj<-j
+  
+  #======
+  burningCells <-ungroup(j)%>% filter(state>0|sumr>0)%>%
+    select("dggid")
+  potentialCells <- inner_join(burningCells,wind,by=c("dggid"="cid"))%>%
+    select(nb)%>%
+    mutate(dggid=nb)%>%
+    select(dggid)%>%
+    dplyr::union(burningCells)
+  
+  
+  newnghbs <- filter(potentialCells, !dggid %in% j$dggid)
+  
+  df2 <- filter(df,dggid %in% newnghbs$dggid)%>%
+    mutate(nburn=0)%>%
+    dplyr::union(j)
+  
+  
+  
+}
+
+#plot the final output
+p=finalPlot(j)
+p
+#or store them to make map using other apps like Qgis.
+#write.table(j, file = "test.txt", row.names = FALSE, dec = ".", sep = "|", quote = FALSE)
+
+```
+
